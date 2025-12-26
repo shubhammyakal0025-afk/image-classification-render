@@ -1,27 +1,32 @@
-from flask import Flask, render_template, request
+import streamlit as st
 import tensorflow as tf
 import numpy as np
 from PIL import Image
 
-app = Flask(__name__)
+st.set_page_config(page_title="Image Classifier")
 
-model = tf.keras.models.load_model("image_model.h5")
-class_names = ["cat", "dog"]
+@st.cache_resource
+def load_model():
+    return tf.keras.models.load_model("image_model.h5")
 
-@app.route("/", methods=["GET", "POST"])
-def index():
-    prediction = None
+model = load_model()
 
-    if request.method == "POST":
-        file = request.files["image"]
-        image = Image.open(file).resize((224, 224))
-        image = np.array(image) / 255.0
-        image = np.expand_dims(image, axis=0)
+class_names = ['cat', 'dog']
 
-        pred = model.predict(image)
-        prediction = class_names[np.argmax(pred)]
+st.title("🐱🐶 Image Classification App")
+st.write("Upload an image and get prediction")
 
-    return render_template("index.html", prediction=prediction)
+uploaded_file = st.file_uploader("Choose an image", type=["jpg", "png", "jpeg"])
 
-if __name__ == "__main__":
-    app.run()
+if uploaded_file is not None:
+    image = Image.open(uploaded_file).convert("RGB")
+    st.image(image, caption="Uploaded Image", use_column_width=True)
+
+    image = image.resize((224, 224))
+    img_array = np.array(image) / 255.0
+    img_array = np.expand_dims(img_array, axis=0)
+
+    prediction = model.predict(img_array)
+    predicted_class = class_names[np.argmax(prediction)]
+
+    st.success(f"✅ Predicted Class: **{predicted_class}**")
